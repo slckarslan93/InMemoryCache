@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using InMemoryCache.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace InMemoryCache.Controllers
@@ -20,21 +21,24 @@ namespace InMemoryCache.Controllers
             //    _memoryCache.Set<string>("zaman", DateTime.Now.ToString());
             //}
             //2. Yol
-            if (!_memoryCache.TryGetValue("zaman", out string zamanCache))
+            //if (!_memoryCache.TryGetValue("zaman", out string zamanCache)){}
+
+            MemoryCacheEntryOptions options = new MemoryCacheEntryOptions();
+            options.AbsoluteExpiration = DateTime.Now.AddSeconds(10);
+
+            //options.SlidingExpiration = TimeSpan.FromSeconds(10);
+            options.Priority = CacheItemPriority.High;
+
+            options.RegisterPostEvictionCallback((key, value, reason, state) =>
             {
-                MemoryCacheEntryOptions options = new MemoryCacheEntryOptions();
-                options.AbsoluteExpiration = DateTime.Now.AddSeconds(10);
+                _memoryCache.Set("callBack", $"{key}-->{value} => sebep:{reason}");
+            });
 
-                //options.SlidingExpiration = TimeSpan.FromSeconds(10);
-                options.Priority = CacheItemPriority.High;
+            _memoryCache.Set<string>("zaman", DateTime.Now.ToString(), options);
 
-                options.RegisterPostEvictionCallback((key, value, reason, state) =>
-                {
-                    _memoryCache.Set("callBack", $"{key}-->{value} => sebep:{reason}");
-                });
+            Product product = new Product { Id = 1, Name = "kalem", Price = 200 };
 
-                _memoryCache.Set<string>("zaman", DateTime.Now.ToString(), options);
-            }
+            _memoryCache.Set<Product>("product:1", product);
 
             return View();
         }
@@ -50,6 +54,8 @@ namespace InMemoryCache.Controllers
             _memoryCache.TryGetValue("callBack", out string callBack);
             ViewBag.zaman = zamanCache;
             ViewBag.callBack = callBack;
+
+            ViewBag.product = _memoryCache.Get<Product>("product:1");
 
             //ViewBag.zaman = _memoryCache.Get<string>("zaman");
             return View();
